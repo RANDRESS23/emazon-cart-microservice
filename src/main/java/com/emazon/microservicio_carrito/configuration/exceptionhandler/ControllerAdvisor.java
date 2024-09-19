@@ -1,9 +1,6 @@
 package com.emazon.microservicio_carrito.configuration.exceptionhandler;
 
-import com.emazon.microservicio_carrito.domain.exception.InvalidProductException;
-import com.emazon.microservicio_carrito.domain.exception.NegativeNotAllowedException;
-import com.emazon.microservicio_carrito.domain.exception.NotFoundException;
-import com.emazon.microservicio_carrito.domain.exception.RemoteServiceException;
+import com.emazon.microservicio_carrito.domain.exception.*;
 import io.jsonwebtoken.ExpiredJwtException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -22,6 +19,13 @@ public class ControllerAdvisor {
         return ResponseEntity.badRequest().body(new ExceptionResponse(
                 String.format(exception.getMessage()),
                 HttpStatus.NOT_FOUND.toString(), LocalDateTime.now()));
+    }
+
+    @ExceptionHandler(SupplyDateException.class)
+    public ResponseEntity<ExceptionSupplyDateResponse> handleSupplyDateException(SupplyDateException exception) {
+        return ResponseEntity.badRequest().body(new ExceptionSupplyDateResponse(
+                String.format(exception.getMessage()),
+                exception.getNextSupplyDate()));
     }
 
     @ExceptionHandler(NegativeNotAllowedException.class)
