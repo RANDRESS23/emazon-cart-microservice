@@ -8,6 +8,7 @@ public class DomainConstants {
     public static final Integer ZERO_CONSTANT = 0;
     public static final Integer DAYS_FOR_SUPPLY = 30;
     public static final Integer MAXIMUM_QUANTITY_OF_PRODUCTS_OF_THE_SAME_CATEGORY = 3;
+    public static final Integer MINUS_ONE = -1;
 
     public static final String FIELD_CLIENT_ID_NULL_MESSAGE = "Field 'clientId' cannot be null";
     public static final String FIELD_TOTAL_QUANTITY_NULL_MESSAGE = "Field 'total quantity' cannot be null";
