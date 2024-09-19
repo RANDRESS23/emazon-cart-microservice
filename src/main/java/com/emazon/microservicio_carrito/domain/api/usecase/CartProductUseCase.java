@@ -4,6 +4,7 @@ import com.emazon.microservicio_carrito.domain.api.ICartProductServicePort;
 import com.emazon.microservicio_carrito.domain.api.ICartServicePort;
 import com.emazon.microservicio_carrito.domain.exception.InvalidProductException;
 import com.emazon.microservicio_carrito.domain.exception.RemoteServiceException;
+import com.emazon.microservicio_carrito.domain.exception.SupplyDateException;
 import com.emazon.microservicio_carrito.domain.model.*;
 import com.emazon.microservicio_carrito.domain.spi.*;
 import com.emazon.microservicio_carrito.domain.util.DomainConstants;
@@ -35,7 +36,7 @@ public class CartProductUseCase implements ICartProductServicePort {
     }
 
     @Override
-    public CartOrSupplyDate saveCartProduct(CartProduct cartProduct) {
+    public Cart saveCartProduct(CartProduct cartProduct) {
         try {
             Long clientId = authPersistencePort.getAuthenticatedUserId();
             Cart clientCart = cartServicePort.getCartByClientId(clientId);
@@ -44,41 +45,12 @@ public class CartProductUseCase implements ICartProductServicePort {
             Product productResponse = stockPersistencePort.verifyProduct(cartProduct.getProductId());
 
             if (cartProduct.getQuantity() <= productResponse.getQuantity()) {
-                if (clientCart == null) {
-                    clientCart = createCart(clientId);
-
-                    CartProduct cartProductSaved = saveCartProductInBD(clientCart, cartProduct, productResponse);
-                    List<CartProduct> cartProducts = clientCart.getProducts();
-                    cartProducts.add(cartProductSaved);
-
-                    clientCart = saveCartInBD(clientCart, cartProduct, productResponse, cartProducts);
-                } else {
-                    List<Long> cartProductCategoryIds = productResponse.getCategories();
-                    List<CartProduct> cartProducts = clientCart.getProducts();
-                    AtomicBoolean isSameProduct = new AtomicBoolean(false);
-
-                    clientCart.setTotalQuantity(clientCart.getTotalQuantity() + cartProduct.getQuantity());
-                    clientCart.setTotalPrice(clientCart.getTotalPrice().add(productResponse.getPrice().multiply(BigDecimal.valueOf(cartProduct.getQuantity()))));
-
-                    long countProductsInSameCategories = getCountProductsInSameCategories(cartProduct, productResponse, cartProducts, isSameProduct, cartProductCategoryIds);
-
-
-                    if (countProductsInSameCategories < DomainConstants.MAXIMUM_QUANTITY_OF_PRODUCTS_OF_THE_SAME_CATEGORY) {
-                        CartProduct cartProductSaved = saveExistCartProductInBD(clientCart, cartProduct, isSameProduct, productResponse);
-                        cartProducts.add(cartProductSaved);
-
-                        clientCart.setProducts(cartProducts);
-                        clientCart = cartServicePort.updateCart(clientCart);
-                    } else {
-                        throw new InvalidProductException(DomainConstants.INVALID_CATEGORY_PRODUCT_EXCEPTION_MESSAGE);
-                    }
-                }
+                clientCart = createOrUpdateCart(clientCart, clientId, cartProduct, productResponse);
             } else {
-                SupplyDate supplyDate = getNextSupplyDate(cartProduct);
-                return new CartOrSupplyDate(supplyDate);
+                getNextSupplyDate(cartProduct);
             }
 
-            return new CartOrSupplyDate(clientCart);
+            return clientCart;
         } catch (FeignException fe) {
             String errorMessage = extractMessageFromError(fe.getMessage());
             throw new RemoteServiceException(errorMessage);
@@ -97,6 +69,23 @@ public class CartProductUseCase implements ICartProductServicePort {
                 LocalDateTime.now(),
                 new ArrayList<>()
         );
+    }
+
+    public Cart createOrUpdateCart(Cart clientCart, Long clientId, CartProduct cartProduct, Product productResponse) {
+        if (clientCart == null) {
+            clientCart = createCart(clientId);
+
+            CartProduct cartProductSaved = saveCartProductInBD(clientCart, cartProduct, productResponse);
+            List<CartProduct> cartProducts = clientCart.getProducts();
+            cartProducts.add(cartProductSaved);
+
+            return saveCartInBD(clientCart, cartProduct, productResponse, cartProducts);
+        } else {
+            clientCart.setTotalQuantity(clientCart.getTotalQuantity() + cartProduct.getQuantity());
+            clientCart.setTotalPrice(clientCart.getTotalPrice().add(productResponse.getPrice().multiply(BigDecimal.valueOf(cartProduct.getQuantity()))));
+
+            return verifyCategoriesQuantity(clientCart, cartProduct, productResponse);
+        }
     }
 
     public CartProduct saveCartProductInBD(Cart clientCart, CartProduct cartProduct, Product productResponse) {
@@ -118,12 +107,30 @@ public class CartProductUseCase implements ICartProductServicePort {
                     productResponse.getPrice().multiply(BigDecimal.valueOf(cartProduct.getQuantity()))
             );
         }
+
         return cartProductPersistencePort.saveCartProduct(cartProduct);
+    }
+
+    public Cart verifyCategoriesQuantity(Cart clientCart, CartProduct cartProduct, Product productResponse) {
+        AtomicBoolean isSameProduct = new AtomicBoolean(false);
+        List<CartProduct> cartProducts = clientCart.getProducts();
+        List<Long> cartProductCategoryIds = productResponse.getCategories();
+        long countProductsInSameCategories = getCountProductsInSameCategories(cartProduct, productResponse, cartProducts, isSameProduct, cartProductCategoryIds);
+
+        if (countProductsInSameCategories < DomainConstants.MAXIMUM_QUANTITY_OF_PRODUCTS_OF_THE_SAME_CATEGORY) {
+            CartProduct cartProductSaved = saveExistCartProductInBD(clientCart, cartProduct, isSameProduct, productResponse);
+            cartProducts.add(cartProductSaved);
+
+            clientCart.setProducts(cartProducts);
+            return cartServicePort.updateCart(clientCart);
+        } else {
+            throw new InvalidProductException(DomainConstants.INVALID_CATEGORY_PRODUCT_EXCEPTION_MESSAGE);
+        }
     }
 
     public Cart saveCartInBD(Cart clientCart, CartProduct cartProduct, Product productResponse, List<CartProduct> cartProducts) {
         clientCart.setTotalQuantity(cartProduct.getQuantity());
-        clientCart.setTotalPrice(productResponse.getPrice());
+        clientCart.setTotalPrice(productResponse.getPrice().multiply(BigDecimal.valueOf(cartProduct.getQuantity())));
         clientCart.setProducts(cartProducts);
 
         return cartServicePort.saveCart(clientCart);
@@ -140,13 +147,14 @@ public class CartProductUseCase implements ICartProductServicePort {
                         isSameProduct.set(true);
                         return false;
                     }
+
                     List<Long> productCategories = stockPersistencePort.verifyProduct(p.getProductId()).getCategories();
                     return productCategories.stream().anyMatch(cartProductCategoryIds::contains);
                 })
                 .count();
     }
 
-    public SupplyDate getNextSupplyDate(CartProduct cartProduct) {
+    public void getNextSupplyDate(CartProduct cartProduct) {
         Supply supplyResponse = transactionPersistencePort.verifySupply(cartProduct.getProductId());
         LocalDate nextSupplyDate = LocalDate.now();
 
@@ -156,21 +164,21 @@ public class CartProductUseCase implements ICartProductServicePort {
             nextSupplyDate = supplyResponse.getDate().plusDays(DomainConstants.DAYS_FOR_SUPPLY);
         }
 
-        return new SupplyDate(DomainConstants.SUPPLY_DATE_MESSAGE, nextSupplyDate);
+        throw new SupplyDateException(DomainConstants.SUPPLY_DATE_MESSAGE, nextSupplyDate);
     }
 
     private String extractMessageFromError(String errorResponse) {
         String key = "\"message\":\"";
         int startIndex = errorResponse.indexOf(key);
 
-        if (startIndex == -1) {
+        if (startIndex == DomainConstants.MINUS_ONE) {
             return DomainConstants.UNKNOWN_ERROR_OCCURRED_MESSAGE;
         }
 
         startIndex += key.length();
         int endIndex = errorResponse.indexOf("\"", startIndex);
 
-        if (endIndex == -1) {
+        if (endIndex == DomainConstants.MINUS_ONE) {
             return DomainConstants.UNKNOWN_ERROR_OCCURRED_MESSAGE;
         }
 

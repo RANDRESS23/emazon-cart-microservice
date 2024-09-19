@@ -1,15 +1,12 @@
 package com.emazon.microservicio_carrito.adapters.driving.controller;
 
 import com.emazon.microservicio_carrito.adapters.driving.dto.request.AddProductToCart;
-import com.emazon.microservicio_carrito.adapters.driving.dto.response.CartOrSupplyResponse;
 import com.emazon.microservicio_carrito.adapters.driving.dto.response.CartResponse;
-import com.emazon.microservicio_carrito.adapters.driving.dto.response.SupplyMessageResponse;
 import com.emazon.microservicio_carrito.adapters.driving.mapper.ICartProductRequestMapper;
 import com.emazon.microservicio_carrito.adapters.driving.mapper.ICartResponseMapper;
-import com.emazon.microservicio_carrito.adapters.driving.mapper.ISupplyMessageResponseMapper;
 import com.emazon.microservicio_carrito.adapters.driving.util.DrivingConstants;
 import com.emazon.microservicio_carrito.domain.api.ICartProductServicePort;
-import com.emazon.microservicio_carrito.domain.model.CartOrSupplyDate;
+import com.emazon.microservicio_carrito.domain.model.Cart;
 import com.emazon.microservicio_carrito.domain.model.CartProduct;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -34,7 +31,6 @@ public class CartRestController {
     private final ICartProductServicePort cartProductServicePort;
     private final ICartProductRequestMapper cartProductRequestMapper;
     private final ICartResponseMapper cartResponseMapper;
-    private final ISupplyMessageResponseMapper supplyMessageResponseMapper;
 
     @Operation(summary = DrivingConstants.SAVE_CART_PRODUCT_SUMMARY, description = DrivingConstants.SAVE_CART_PRODUCT_DESCRIPTION)
     @ApiResponses(value = {
@@ -44,20 +40,11 @@ public class CartRestController {
     })
     @PreAuthorize(DrivingConstants.HAS_ROLE_CLIENT)
     @PostMapping
-    public ResponseEntity<CartOrSupplyResponse> addProductToCart(@Valid @RequestBody AddProductToCart request) {
+    public ResponseEntity<CartResponse> addProductToCart(@Valid @RequestBody AddProductToCart request) {
         CartProduct product = cartProductRequestMapper.addRequestToCartProduct(request);
-        CartOrSupplyDate cartUpdated = cartProductServicePort.saveCartProduct(product);
+        Cart cartUpdated = cartProductServicePort.saveCartProduct(product);
+        CartResponse response = cartResponseMapper.toCartResponse(cartUpdated);
 
-        if (cartUpdated.getCart() != null) {
-            CartResponse response = cartResponseMapper.toCartResponse(cartUpdated.getCart());
-
-            return new ResponseEntity<>(new CartOrSupplyResponse(response), HttpStatus.CREATED);
-        } else if (cartUpdated.getSupplyDate() != null) {
-            SupplyMessageResponse supplyMessageResponse = supplyMessageResponseMapper.toSupplyMessageResponse(cartUpdated.getSupplyDate());
-
-            return new ResponseEntity<>(new CartOrSupplyResponse(supplyMessageResponse), HttpStatus.BAD_REQUEST);
-        }
-
-        return new ResponseEntity<>(HttpStatus.OK);
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 }
