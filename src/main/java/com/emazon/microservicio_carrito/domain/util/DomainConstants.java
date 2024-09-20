@@ -29,4 +29,6 @@ public class DomainConstants {
     public static final String INVALID_CATEGORY_PRODUCT_EXCEPTION_MESSAGE = "There are already 3 products in the same category.";
 
     public static final String UNKNOWN_ERROR_OCCURRED_MESSAGE = "Unknown error occurred.";
+
+    public static final String INVALID_PRODUCT_QUANTITY_MESSAGE = "The quantity of the product you want to add to the cart exceeds the amount of stock available for the product.";
 }
