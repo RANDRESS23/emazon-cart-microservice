@@ -28,6 +28,13 @@ public class ControllerAdvisor {
                 exception.getNextSupplyDate()));
     }
 
+    @ExceptionHandler(InvalidProductQuantityException.class)
+    public ResponseEntity<ExceptionResponse> handleInvalidProductQuantityException(InvalidProductQuantityException exception) {
+        return ResponseEntity.badRequest().body(new ExceptionResponse(
+                String.format(exception.getMessage()),
+                HttpStatus.BAD_REQUEST.toString(), LocalDateTime.now()));
+    }
+
     @ExceptionHandler(NegativeNotAllowedException.class)
     public ResponseEntity<ExceptionResponse> handleNegativeNotAllowedException(NegativeNotAllowedException exception) {
         return ResponseEntity.badRequest().body(new ExceptionResponse(
