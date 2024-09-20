@@ -3,6 +3,7 @@ package com.emazon.microservicio_carrito.domain.api.usecase;
 import com.emazon.microservicio_carrito.domain.api.ICartProductServicePort;
 import com.emazon.microservicio_carrito.domain.api.ICartServicePort;
 import com.emazon.microservicio_carrito.domain.exception.InvalidProductException;
+import com.emazon.microservicio_carrito.domain.exception.InvalidProductQuantityException;
 import com.emazon.microservicio_carrito.domain.exception.RemoteServiceException;
 import com.emazon.microservicio_carrito.domain.exception.SupplyDateException;
 import com.emazon.microservicio_carrito.domain.model.*;
@@ -138,20 +139,29 @@ public class CartProductUseCase implements ICartProductServicePort {
 
     public long getCountProductsInSameCategories(CartProduct cartProduct, Product productResponse, List<CartProduct> cartProducts, AtomicBoolean isSameProduct, List<Long> cartProductCategoryIds) {
         return cartProducts.stream()
-                .filter(p -> {
-                    if (p.getProductId().equals(cartProduct.getProductId())) {
-                        BigDecimal totalPriceProduct = productResponse.getPrice().multiply(BigDecimal.valueOf(cartProduct.getQuantity()));
-                        cartProduct.setCartProductId(p.getCartProductId());
-                        cartProduct.setQuantity(cartProduct.getQuantity() + p.getQuantity());
-                        cartProduct.setTotalPrice(totalPriceProduct.add(p.getTotalPrice()));
-                        isSameProduct.set(true);
-                        return false;
-                    }
+            .filter(p -> {
+                if (p.getProductId().equals(cartProduct.getProductId())) {
+                    return updateCartProductQuantityAndPrice(p, cartProduct, productResponse, isSameProduct);
+                }
 
-                    List<Long> productCategories = stockPersistencePort.verifyProduct(p.getProductId()).getCategories();
-                    return productCategories.stream().anyMatch(cartProductCategoryIds::contains);
-                })
-                .count();
+                List<Long> productCategories = stockPersistencePort.verifyProduct(p.getProductId()).getCategories();
+                return productCategories.stream().anyMatch(cartProductCategoryIds::contains);
+            })
+            .count();
+    }
+
+    public boolean updateCartProductQuantityAndPrice(CartProduct p, CartProduct cartProduct, Product productResponse, AtomicBoolean isSameProduct) {
+        if ((p.getQuantity() + cartProduct.getQuantity()) > productResponse.getQuantity()) {
+            throw new InvalidProductQuantityException(DomainConstants.INVALID_PRODUCT_QUANTITY_MESSAGE);
+        }
+
+        BigDecimal totalPriceProduct = productResponse.getPrice().multiply(BigDecimal.valueOf(cartProduct.getQuantity()));
+        cartProduct.setCartProductId(p.getCartProductId());
+        cartProduct.setQuantity(cartProduct.getQuantity() + p.getQuantity());
+        cartProduct.setTotalPrice(totalPriceProduct.add(p.getTotalPrice()));
+        isSameProduct.set(true);
+
+        return false;
     }
 
     public void getNextSupplyDate(CartProduct cartProduct) {
