@@ -19,10 +19,11 @@ public class DomainConstants {
     public static final String FIELD_UPDATED_AT_NULL_MESSAGE = "Field 'updatedAt' cannot be null";
 
     public static final String CART_ALREADY_EXISTS_MESSAGE = "Cart already exists.";
+    public static final String CART_NOT_FOUND = "Cart not found.";
+
+    public static final String CART_PRODUCT_NOT_FOUND = "The product was not found in the cart.";
 
     public static final String SUPPLY_DATE_MESSAGE = "There are no products in stock, please wait for the supply date.";
-
-    public static final String MINIMUM_CART_PRODUCTS_MESSAGE = "Cart products must have at least 1 cart product as a minimum.";
 
     public static final String NEGATIVE_NOT_ALLOWED_EXCEPTION_MESSAGE = "Negative exception not allowed.";
 
@@ -30,5 +31,6 @@ public class DomainConstants {
 
     public static final String UNKNOWN_ERROR_OCCURRED_MESSAGE = "Unknown error occurred.";
 
-    public static final String INVALID_PRODUCT_QUANTITY_MESSAGE = "The quantity of the product you want to add to the cart exceeds the amount of stock available for the product.";
+    public static final String INVALID_ADD_PRODUCT_QUANTITY_MESSAGE = "The quantity of the product you want to add to the cart exceeds the amount of stock available for the product.";
+    public static final String INVALID_REMOVE_PRODUCT_QUANTITY_FROM_CART_MESSAGE = "The quantity of the product you want to remove from the cart exceeds the quantity of the product that is in the cart.";
 }

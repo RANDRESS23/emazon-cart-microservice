@@ -21,4 +21,10 @@ public class DrivingConstants {
     public static final String SAVE_CART_PRODUCT_RESPONSE_201_DESCRIPTION = "Cart product saved successfully";
     public static final String SAVE_CART_PRODUCT_RESPONSE_400_DESCRIPTION = "Invalid field";
     public static final String SAVE_CART_PRODUCT_RESPONSE_503_DESCRIPTION = "Service unavailable";
+
+    public static final String REMOVE_CART_PRODUCT_SUMMARY = "Remove cart product";
+    public static final String REMOVE_CART_PRODUCT_DESCRIPTION = "Remove a product from the cart";
+    public static final String REMOVE_CART_PRODUCT_RESPONSE_201_DESCRIPTION = "Cart product removed successfully";
+    public static final String REMOVE_CART_PRODUCT_RESPONSE_400_DESCRIPTION = "Invalid field";
+    public static final String REMOVE_CART_PRODUCT_RESPONSE_503_DESCRIPTION = "Service unavailable";
 }
