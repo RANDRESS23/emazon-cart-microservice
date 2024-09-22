@@ -7,7 +7,6 @@ import com.emazon.microservicio_carrito.domain.spi.IAuthPersistencePort;
 import com.emazon.microservicio_carrito.domain.spi.ICartPersistencePort;
 import com.emazon.microservicio_carrito.domain.spi.ICartProductPersistencePort;
 import com.emazon.microservicio_carrito.domain.util.DomainConstants;
-import com.emazon.microservicio_carrito.domain.validation.CartValidation;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -34,9 +33,6 @@ class CartUseCaseTest {
     @Mock
     private IAuthPersistencePort authPersistencePort;
 
-    @Mock
-    private CartValidation cartValidation;
-
     @InjectMocks
     private CartUseCase cartUseCase;
 
@@ -57,7 +53,6 @@ class CartUseCaseTest {
         // Assert
         assertEquals(savedCart, result);
         verify(cartPersistencePort, times(1)).saveCart(any(Cart.class));
-        verify(cartValidation, times(1)).validateCart(cart);
         verify(authPersistencePort, times(1)).getAuthenticatedUserId();
     }
 
@@ -75,7 +70,6 @@ class CartUseCaseTest {
 
         assertEquals(DomainConstants.CART_ALREADY_EXISTS_MESSAGE, exception.getMessage());
         verify(cartPersistencePort, times(0)).saveCart(any(Cart.class));  // No se debe guardar el carrito
-        verify(cartValidation, times(0)).validateCart(cart);
     }
 
     @Test
@@ -92,7 +86,6 @@ class CartUseCaseTest {
 
         // Assert
         assertEquals(updatedCart, result);
-        verify(cartValidation, times(1)).validateCart(cart);
         verify(cartPersistencePort, times(1)).saveCart(cart);
     }
 
