@@ -6,5 +6,6 @@ import java.util.List;
 
 public interface ICartProductPersistencePort {
     CartProduct saveCartProduct(CartProduct cartProduct);
+    void removeCartProduct(CartProduct cartProduct);
     List<CartProduct> getAllProducts(Long cartId);
 }
