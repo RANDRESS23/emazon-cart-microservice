@@ -8,7 +8,6 @@ import com.emazon.microservicio_carrito.domain.spi.IAuthPersistencePort;
 import com.emazon.microservicio_carrito.domain.spi.ICartPersistencePort;
 import com.emazon.microservicio_carrito.domain.spi.ICartProductPersistencePort;
 import com.emazon.microservicio_carrito.domain.util.DomainConstants;
-import com.emazon.microservicio_carrito.domain.validation.CartValidation;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -17,13 +16,11 @@ public class CartUseCase implements ICartServicePort {
     private final ICartPersistencePort cartPersistencePort;
     private final ICartProductPersistencePort cartProductPersistencePort;
     private final IAuthPersistencePort authPersistencePort;
-    private final CartValidation cartValidation;
 
-    public CartUseCase(ICartPersistencePort cartPersistencePort, ICartProductPersistencePort cartProductPersistencePort, IAuthPersistencePort authPersistencePort, CartValidation cartValidation) {
+    public CartUseCase(ICartPersistencePort cartPersistencePort, ICartProductPersistencePort cartProductPersistencePort, IAuthPersistencePort authPersistencePort) {
         this.cartPersistencePort = cartPersistencePort;
         this.cartProductPersistencePort = cartProductPersistencePort;
         this.authPersistencePort = authPersistencePort;
-        this.cartValidation = cartValidation;
     }
 
     @Override
@@ -32,7 +29,6 @@ public class CartUseCase implements ICartServicePort {
             throw new AlreadyExistsFieldException(DomainConstants.CART_ALREADY_EXISTS_MESSAGE);
         }
 
-        cartValidation.validateCart(cart);
         Long clientId = authPersistencePort.getAuthenticatedUserId();
 
         cart.setClientId(clientId);
@@ -48,7 +44,6 @@ public class CartUseCase implements ICartServicePort {
 
     @Override
     public Cart updateCart(Cart cart) {
-        cartValidation.validateCart(cart);
         cart.setUpdatedAt(LocalDateTime.now());
 
         Cart cartUpdated = cartPersistencePort.saveCart(cart);

@@ -102,4 +102,85 @@ class CartProductAdapterTest {
         verify(cartProductRepository).findAllProducts(cartId);
         verify(cartProductEntityMapper).toListOfCartProducts(Collections.emptyList());
     }
+
+    @Test
+    void removeCartProduct_Success() {
+        // Arrange
+        CartProduct cartProduct = new CartProduct(1L, 1L, 1L, 2L, BigDecimal.valueOf(50.0), BigDecimal.valueOf(100.0));
+        CartProductEntity cartProductEntity = new CartProductEntity();
+        cartProductEntity.setCartProductId(1L);
+        cartProductEntity.setCartId(1L);
+        cartProductEntity.setProductId(1L);
+        cartProductEntity.setQuantity(2L);
+        cartProductEntity.setUnitPrice(BigDecimal.valueOf(50.0));
+        cartProductEntity.setTotalPrice(BigDecimal.valueOf(100.0));
+
+        // Configurar el mock del mapper
+        when(cartProductEntityMapper.toEntity(cartProduct)).thenReturn(cartProductEntity);
+
+        // Ejecutar el método
+        cartProductAdapter.removeCartProduct(cartProduct);
+
+        // Verificar que se llamaron los métodos correctos
+        verify(cartProductEntityMapper).toEntity(cartProduct);
+        verify(cartProductRepository).delete(cartProductEntity);
+    }
+
+    @Test
+    void removeCartProduct_MapperThrowsException() {
+        // Arrange
+        CartProduct cartProduct = new CartProduct(1L, 1L, 1L, 2L, BigDecimal.valueOf(50.0), BigDecimal.valueOf(100.0));
+        CartProductEntity cartProductEntity = new CartProductEntity();
+        cartProductEntity.setCartProductId(1L);
+        cartProductEntity.setCartId(1L);
+        cartProductEntity.setProductId(1L);
+        cartProductEntity.setQuantity(2L);
+        cartProductEntity.setUnitPrice(BigDecimal.valueOf(50.0));
+        cartProductEntity.setTotalPrice(BigDecimal.valueOf(100.0));
+
+        // Configurar el mock para que lance una excepción al mapear
+        when(cartProductEntityMapper.toEntity(cartProduct))
+                .thenThrow(new IllegalArgumentException("Error in mapping"));
+
+        // Ejecutar el método y verificar que se lanza la excepción
+        try {
+            cartProductAdapter.removeCartProduct(cartProduct);
+        } catch (IllegalArgumentException e) {
+            assertEquals("Error in mapping", e.getMessage());
+        }
+
+        // Verificar que el método delete del repositorio nunca fue llamado
+        verify(cartProductRepository, never()).delete(any(CartProductEntity.class));
+    }
+
+    @Test
+    void removeCartProduct_RepositoryThrowsException() {
+        // Arrange
+        CartProduct cartProduct = new CartProduct(1L, 1L, 1L, 2L, BigDecimal.valueOf(50.0), BigDecimal.valueOf(100.0));
+        CartProductEntity cartProductEntity = new CartProductEntity();
+        cartProductEntity.setCartProductId(1L);
+        cartProductEntity.setCartId(1L);
+        cartProductEntity.setProductId(1L);
+        cartProductEntity.setQuantity(2L);
+        cartProductEntity.setUnitPrice(BigDecimal.valueOf(50.0));
+        cartProductEntity.setTotalPrice(BigDecimal.valueOf(100.0));
+
+        // Configurar el mock del mapper para devolver la entidad correctamente
+        when(cartProductEntityMapper.toEntity(cartProduct)).thenReturn(cartProductEntity);
+
+        // Simular una excepción al intentar eliminar el producto del carrito
+        doThrow(new RuntimeException("Error deleting cart product"))
+                .when(cartProductRepository).delete(cartProductEntity);
+
+        // Ejecutar el método y verificar que se lanza la excepción
+        try {
+            cartProductAdapter.removeCartProduct(cartProduct);
+        } catch (RuntimeException e) {
+            assertEquals("Error deleting cart product", e.getMessage());
+        }
+
+        // Verificar que el mapper se llamó correctamente antes de que ocurriera la excepción
+        verify(cartProductEntityMapper).toEntity(cartProduct);
+        verify(cartProductRepository).delete(cartProductEntity);
+    }
 }

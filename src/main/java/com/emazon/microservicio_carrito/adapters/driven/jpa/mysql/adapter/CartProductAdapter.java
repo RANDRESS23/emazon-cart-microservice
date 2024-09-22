@@ -21,6 +21,12 @@ public class CartProductAdapter implements ICartProductPersistencePort {
     }
 
     @Override
+    public void removeCartProduct(CartProduct cartProduct) {
+        CartProductEntity cartProductEntity = cartProductEntityMapper.toEntity(cartProduct);
+        cartProductRepository.delete(cartProductEntity);
+    }
+
+    @Override
     public List<CartProduct> getAllProducts(Long cartId) {
         List<CartProductEntity> listOfCartProductsEntity = cartProductRepository.findAllProducts(cartId);
         return cartProductEntityMapper.toListOfCartProducts(listOfCartProductsEntity);

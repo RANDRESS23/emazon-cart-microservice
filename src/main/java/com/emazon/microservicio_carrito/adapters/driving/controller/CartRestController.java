@@ -18,10 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/cart")
@@ -46,5 +43,21 @@ public class CartRestController {
         CartResponse response = cartResponseMapper.toCartResponse(cartUpdated);
 
         return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
+
+    @Operation(summary = DrivingConstants.REMOVE_CART_PRODUCT_SUMMARY, description = DrivingConstants.REMOVE_CART_PRODUCT_DESCRIPTION)
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = DrivingConstants.RESPONSE_CODE_201, description = DrivingConstants.REMOVE_CART_PRODUCT_RESPONSE_201_DESCRIPTION),
+            @ApiResponse(responseCode = DrivingConstants.RESPONSE_CODE_400, description = DrivingConstants.REMOVE_CART_PRODUCT_RESPONSE_400_DESCRIPTION, content = @Content),
+            @ApiResponse(responseCode = DrivingConstants.RESPONSE_CODE_503, description = DrivingConstants.REMOVE_CART_PRODUCT_RESPONSE_503_DESCRIPTION, content = @Content)
+    })
+    @PreAuthorize(DrivingConstants.HAS_ROLE_CLIENT)
+    @DeleteMapping
+    public ResponseEntity<CartResponse> removeProductToCart(@Valid @RequestBody AddProductToCart request) {
+        CartProduct product = cartProductRequestMapper.addRequestToCartProduct(request);
+        Cart cartUpdated = cartProductServicePort.removeCartProduct(product);
+        CartResponse response = cartResponseMapper.toCartResponse(cartUpdated);
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

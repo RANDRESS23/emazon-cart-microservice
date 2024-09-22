@@ -16,7 +16,6 @@ import com.emazon.microservicio_carrito.domain.api.usecase.CartProductUseCase;
 import com.emazon.microservicio_carrito.domain.api.usecase.CartUseCase;
 import com.emazon.microservicio_carrito.domain.spi.*;
 import com.emazon.microservicio_carrito.domain.validation.CartProductValidation;
-import com.emazon.microservicio_carrito.domain.validation.CartValidation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -50,11 +49,6 @@ public class BeanConfiguration {
     }
 
     @Bean
-    public CartValidation cartValidation() {
-        return new CartValidation();
-    }
-
-    @Bean
     public CartProductValidation cartProductValidation() {
         return new CartProductValidation();
     }
@@ -66,7 +60,7 @@ public class BeanConfiguration {
 
     @Bean
     public ICartServicePort cartServicePort() {
-        return new CartUseCase(categoryPersistencePort(), cartProductPersistencePort(), authPersistencePort(), cartValidation());
+        return new CartUseCase(categoryPersistencePort(), cartProductPersistencePort(), authPersistencePort());
     }
 
     public ICartProductPersistencePort cartProductPersistencePort() {

@@ -109,4 +109,42 @@ class CartRestControllerTest {
         verify(cartProductRequestMapper).addRequestToCartProduct(addProductToCart);
         verify(cartProductServicePort).saveCartProduct(cartProduct);
     }
+
+    @Test
+    void removeProductToCart_Success() {
+        // Configurar mocks
+        when(cartProductRequestMapper.addRequestToCartProduct(any(AddProductToCart.class))).thenReturn(cartProduct);
+        when(cartProductServicePort.removeCartProduct(any(CartProduct.class))).thenReturn(cart);
+        when(cartResponseMapper.toCartResponse(any(Cart.class))).thenReturn(cartResponse);
+
+        // Ejecutar método
+        ResponseEntity<CartResponse> response = cartRestController.removeProductToCart(addProductToCart);
+
+        // Verificar comportamiento
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(cartResponse, response.getBody());
+
+        // Verificar que los métodos fueron llamados con los parámetros correctos
+        verify(cartProductRequestMapper).addRequestToCartProduct(addProductToCart);
+        verify(cartProductServicePort).removeCartProduct(cartProduct);
+        verify(cartResponseMapper).toCartResponse(cart);
+    }
+
+    @Test
+    void removeProductToCart_InvalidProduct_ThrowsException() {
+        // Simular una excepción al mapear el producto
+        when(cartProductRequestMapper.addRequestToCartProduct(any(AddProductToCart.class)))
+                .thenThrow(new IllegalArgumentException("Invalid product data"));
+
+        // Ejecutar y verificar excepción
+        try {
+            cartRestController.removeProductToCart(addProductToCart);
+        } catch (IllegalArgumentException e) {
+            assertEquals("Invalid product data", e.getMessage());
+        }
+
+        // Verificar que no se llamó a los otros métodos
+        verify(cartProductServicePort, never()).removeCartProduct(any(CartProduct.class));
+        verify(cartResponseMapper, never()).toCartResponse(any(Cart.class));
+    }
 }
