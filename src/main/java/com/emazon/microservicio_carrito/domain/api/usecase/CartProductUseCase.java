@@ -2,10 +2,7 @@ package com.emazon.microservicio_carrito.domain.api.usecase;
 
 import com.emazon.microservicio_carrito.domain.api.ICartProductServicePort;
 import com.emazon.microservicio_carrito.domain.api.ICartServicePort;
-import com.emazon.microservicio_carrito.domain.exception.InvalidProductException;
-import com.emazon.microservicio_carrito.domain.exception.InvalidProductQuantityException;
-import com.emazon.microservicio_carrito.domain.exception.RemoteServiceException;
-import com.emazon.microservicio_carrito.domain.exception.SupplyDateException;
+import com.emazon.microservicio_carrito.domain.exception.*;
 import com.emazon.microservicio_carrito.domain.model.*;
 import com.emazon.microservicio_carrito.domain.spi.*;
 import com.emazon.microservicio_carrito.domain.util.DomainConstants;
@@ -60,16 +57,90 @@ public class CartProductUseCase implements ICartProductServicePort {
         }
     }
 
-    public Cart createCart(Long clientId) {
-        return new Cart(
-                1L,
-                clientId,
-                0L,
-                new BigDecimal(0),
-                LocalDateTime.now(),
-                LocalDateTime.now(),
-                new ArrayList<>()
-        );
+    @Override
+    public Cart removeCartProduct(CartProduct cartProduct) {
+        try {
+            Long clientId = authPersistencePort.getAuthenticatedUserId();
+            Cart clientCart = cartServicePort.getCartByClientId(clientId);
+
+            if (clientCart == null) {
+                throw new NotFoundException(DomainConstants.CART_NOT_FOUND);
+            }
+
+            cartProductValidation.validateCartProduct(cartProduct);
+            Product productResponse = stockPersistencePort.verifyProduct(cartProduct.getProductId());
+            AtomicBoolean isTotalProductQuantity = new AtomicBoolean(false);
+            List<CartProduct> newCartProducts = new ArrayList<>();
+            List<CartProduct> cartProducts = getCartProducts(cartProduct, clientCart, productResponse, isTotalProductQuantity, newCartProducts);
+
+            if (isTotalProductQuantity.get()) {
+                cartProductPersistencePort.removeCartProduct(cartProduct);
+                setClientCartValues(clientCart, cartProduct, productResponse, newCartProducts);
+
+                return cartServicePort.updateCart(clientCart);
+            } else {
+                cartProductPersistencePort.saveCartProduct(cartProduct);
+                setClientCartValues(clientCart, cartProduct, productResponse, cartProducts);
+
+                return cartServicePort.updateCart(clientCart);
+            }
+
+        } catch (FeignException fe) {
+            String errorMessage = extractMessageFromError(fe.getMessage());
+            throw new RemoteServiceException(errorMessage);
+        } catch (Exception e) {
+            throw e;
+        }
+    }
+
+    private static List<CartProduct> getCartProducts(CartProduct cartProduct, Cart clientCart, Product productResponse, AtomicBoolean isTotalProductQuantity, List<CartProduct> newCartProducts) {
+        List<CartProduct> cartProducts = clientCart.getProducts();
+        AtomicBoolean isExistsCartProductInTheCart = new AtomicBoolean(false);
+
+        cartProducts.forEach(p -> {
+            if (p.getProductId().equals(cartProduct.getProductId())) {
+                validateEqualsProduct(cartProduct, p, isExistsCartProductInTheCart, isTotalProductQuantity, productResponse);
+            } else newCartProducts.add(p);
+        });
+
+        if (!isExistsCartProductInTheCart.get()) {
+            throw new NotFoundException(DomainConstants.CART_PRODUCT_NOT_FOUND);
+        }
+
+        return cartProducts;
+    }
+
+    public static void setCartProductValues(CartProduct cartProduct, CartProduct p) {
+        cartProduct.setCartProductId(p.getCartProductId());
+        cartProduct.setCartId(p.getCartId());
+        cartProduct.setUnitPrice(p.getUnitPrice());
+        cartProduct.setTotalPrice(p.getTotalPrice());
+        cartProduct.setQuantity(p.getQuantity());
+    }
+
+    public void setClientCartValues(Cart clientCart, CartProduct cartProduct, Product productResponse, List<CartProduct> newCartProducts) {
+        clientCart.setTotalQuantity(clientCart.getTotalQuantity() - cartProduct.getQuantity());
+        clientCart.setTotalPrice(clientCart.getTotalPrice().subtract(productResponse.getPrice().multiply(BigDecimal.valueOf(cartProduct.getQuantity()))));
+        clientCart.setProducts(newCartProducts);
+    }
+
+    public static void validateEqualsProduct(CartProduct cartProduct, CartProduct p, AtomicBoolean isExistsCartProductInTheCart, AtomicBoolean isTotalProductQuantity, Product productResponse) {
+        if (cartProduct.getQuantity() > p.getQuantity()) {
+            throw new InvalidProductQuantityException(DomainConstants.INVALID_REMOVE_PRODUCT_QUANTITY_FROM_CART_MESSAGE);
+        }
+
+        isExistsCartProductInTheCart.set(true);
+
+        if (cartProduct.getQuantity().equals(p.getQuantity())) {
+            setCartProductValues(cartProduct, p);
+
+            isTotalProductQuantity.set(true);
+        } else {
+            p.setQuantity(p.getQuantity() - cartProduct.getQuantity());
+            p.setTotalPrice(p.getTotalPrice().subtract(productResponse.getPrice().multiply(BigDecimal.valueOf(cartProduct.getQuantity()))));
+
+            setCartProductValues(cartProduct, p);
+        }
     }
 
     public Cart createOrUpdateCart(Cart clientCart, Long clientId, CartProduct cartProduct, Product productResponse) {
@@ -152,7 +223,7 @@ public class CartProductUseCase implements ICartProductServicePort {
 
     public boolean updateCartProductQuantityAndPrice(CartProduct p, CartProduct cartProduct, Product productResponse, AtomicBoolean isSameProduct) {
         if ((p.getQuantity() + cartProduct.getQuantity()) > productResponse.getQuantity()) {
-            throw new InvalidProductQuantityException(DomainConstants.INVALID_PRODUCT_QUANTITY_MESSAGE);
+            throw new InvalidProductQuantityException(DomainConstants.INVALID_ADD_PRODUCT_QUANTITY_MESSAGE);
         }
 
         BigDecimal totalPriceProduct = productResponse.getPrice().multiply(BigDecimal.valueOf(cartProduct.getQuantity()));
@@ -193,5 +264,17 @@ public class CartProductUseCase implements ICartProductServicePort {
         }
 
         return errorResponse.substring(startIndex, endIndex);
+    }
+
+    public Cart createCart(Long clientId) {
+        return new Cart(
+                1L,
+                clientId,
+                0L,
+                new BigDecimal(0),
+                LocalDateTime.now(),
+                LocalDateTime.now(),
+                new ArrayList<>()
+        );
     }
 }
