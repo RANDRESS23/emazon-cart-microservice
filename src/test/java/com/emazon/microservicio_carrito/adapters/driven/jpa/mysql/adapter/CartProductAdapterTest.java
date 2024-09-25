@@ -4,11 +4,15 @@ import com.emazon.microservicio_carrito.adapters.driven.jpa.mysql.entity.CartPro
 import com.emazon.microservicio_carrito.adapters.driven.jpa.mysql.mapper.ICartProductEntityMapper;
 import com.emazon.microservicio_carrito.adapters.driven.jpa.mysql.repository.ICartProductRepository;
 import com.emazon.microservicio_carrito.domain.model.CartProduct;
+import com.emazon.microservicio_carrito.domain.model.CustomPage;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 import java.util.Collections;
@@ -31,7 +35,7 @@ class CartProductAdapterTest {
     @Test
     void saveCartProduct_ShouldReturnSavedCartProduct() {
         // Arrange
-        CartProduct cartProduct = new CartProduct(1L, 1L, 1L, 2L, BigDecimal.valueOf(50.0), BigDecimal.valueOf(100.0));
+        CartProduct cartProduct = new CartProduct(1L, 1L, 1L, "camiseta", 2L, BigDecimal.valueOf(50.0), BigDecimal.valueOf(100.0));
         CartProductEntity cartProductEntity = new CartProductEntity();
         cartProductEntity.setCartProductId(1L);
         cartProductEntity.setCartId(1L);
@@ -59,7 +63,7 @@ class CartProductAdapterTest {
     void getAllProducts_ShouldReturnListOfCartProducts() {
         // Arrange
         Long cartId = 1L;
-        CartProduct cartProduct = new CartProduct(1L, cartId, 1L, 2L, BigDecimal.valueOf(50.0), BigDecimal.valueOf(100.0));
+        CartProduct cartProduct = new CartProduct(1L, cartId, 1L, "camiseta", 2L, BigDecimal.valueOf(50.0), BigDecimal.valueOf(100.0));
         CartProductEntity cartProductEntity = new CartProductEntity();
         cartProductEntity.setCartProductId(1L);
         cartProductEntity.setCartId(cartId);
@@ -106,7 +110,7 @@ class CartProductAdapterTest {
     @Test
     void removeCartProduct_Success() {
         // Arrange
-        CartProduct cartProduct = new CartProduct(1L, 1L, 1L, 2L, BigDecimal.valueOf(50.0), BigDecimal.valueOf(100.0));
+        CartProduct cartProduct = new CartProduct(1L, 1L, 1L, "camiseta", 2L, BigDecimal.valueOf(50.0), BigDecimal.valueOf(100.0));
         CartProductEntity cartProductEntity = new CartProductEntity();
         cartProductEntity.setCartProductId(1L);
         cartProductEntity.setCartId(1L);
@@ -129,7 +133,7 @@ class CartProductAdapterTest {
     @Test
     void removeCartProduct_MapperThrowsException() {
         // Arrange
-        CartProduct cartProduct = new CartProduct(1L, 1L, 1L, 2L, BigDecimal.valueOf(50.0), BigDecimal.valueOf(100.0));
+        CartProduct cartProduct = new CartProduct(1L, 1L, 1L, "camiseta", 2L, BigDecimal.valueOf(50.0), BigDecimal.valueOf(100.0));
         CartProductEntity cartProductEntity = new CartProductEntity();
         cartProductEntity.setCartProductId(1L);
         cartProductEntity.setCartId(1L);
@@ -156,7 +160,7 @@ class CartProductAdapterTest {
     @Test
     void removeCartProduct_RepositoryThrowsException() {
         // Arrange
-        CartProduct cartProduct = new CartProduct(1L, 1L, 1L, 2L, BigDecimal.valueOf(50.0), BigDecimal.valueOf(100.0));
+        CartProduct cartProduct = new CartProduct(1L, 1L, 1L, "camiseta", 2L, BigDecimal.valueOf(50.0), BigDecimal.valueOf(100.0));
         CartProductEntity cartProductEntity = new CartProductEntity();
         cartProductEntity.setCartProductId(1L);
         cartProductEntity.setCartId(1L);
@@ -182,5 +186,49 @@ class CartProductAdapterTest {
         // Verificar que el mapper se llamó correctamente antes de que ocurriera la excepción
         verify(cartProductEntityMapper).toEntity(cartProduct);
         verify(cartProductRepository).delete(cartProductEntity);
+    }
+
+    @Test
+    void testGetAllCartProductsAscending() {
+        // Arrange
+        int page = 0;
+        int size = 5;
+        boolean ascending = true;
+        Long cartId = 1L;
+
+        // Datos mock para Page<CartProductEntity>
+        CartProductEntity cartProductEntity = new CartProductEntity();
+        cartProductEntity.setCartProductId(1L);
+        cartProductEntity.setCartId(cartId);
+        cartProductEntity.setProductId(1L);
+        cartProductEntity.setName("Product 1");
+        cartProductEntity.setQuantity(2L);
+        cartProductEntity.setUnitPrice(new BigDecimal("10.00"));
+        cartProductEntity.setTotalPrice(new BigDecimal("20.00"));
+
+        List<CartProductEntity> cartProductEntities = List.of(cartProductEntity);
+        Page<CartProductEntity> pageOfCartProductsEntity = new PageImpl<>(cartProductEntities);
+
+        // Datos mock para Page<CartProduct>
+        CartProduct cartProduct = new CartProduct(1L, cartId, 1L, "Product 1", 2L, new BigDecimal("10.00"), new BigDecimal("20.00"));
+        Page<CartProduct> cartProductPage = new PageImpl<>(List.of(cartProduct));
+
+        // Mockear el comportamiento de los repositorios y mappers
+        when(cartProductRepository.findAllCartProducts(any(Pageable.class), eq(cartId))).thenReturn(pageOfCartProductsEntity);
+        when(cartProductEntityMapper.toPageOfCartProducts(any(Page.class))).thenReturn(cartProductPage);
+
+        // Act
+        CustomPage<CartProduct> result = cartProductAdapter.getAllCartProducts(page, size, ascending, cartId);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(1, result.getContent().size());
+        assertEquals(cartProduct.getCartProductId(), result.getContent().get(0).getCartProductId());
+        assertEquals(cartProduct.getName(), result.getContent().get(0).getName());
+        assertEquals(cartProduct.getTotalPrice(), result.getContent().get(0).getTotalPrice());
+
+        // Verificar que el repositorio fue llamado con los parámetros correctos
+        verify(cartProductRepository).findAllCartProducts(any(Pageable.class), eq(cartId));
+        verify(cartProductEntityMapper).toPageOfCartProducts(any(Page.class));
     }
 }

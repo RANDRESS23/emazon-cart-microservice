@@ -1,12 +1,12 @@
 package com.emazon.microservicio_carrito.adapters.driving.controller;
 
 import com.emazon.microservicio_carrito.adapters.driving.dto.request.AddProductToCart;
-import com.emazon.microservicio_carrito.adapters.driving.dto.response.CartResponse;
+import com.emazon.microservicio_carrito.adapters.driving.dto.response.*;
 import com.emazon.microservicio_carrito.adapters.driving.mapper.ICartProductRequestMapper;
 import com.emazon.microservicio_carrito.adapters.driving.mapper.ICartResponseMapper;
 import com.emazon.microservicio_carrito.domain.api.ICartProductServicePort;
-import com.emazon.microservicio_carrito.domain.model.Cart;
-import com.emazon.microservicio_carrito.domain.model.CartProduct;
+import com.emazon.microservicio_carrito.domain.api.ICartServicePort;
+import com.emazon.microservicio_carrito.domain.model.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,6 +18,7 @@ import org.springframework.http.ResponseEntity;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -34,6 +35,9 @@ class CartRestControllerTest {
     @Mock
     private ICartResponseMapper cartResponseMapper;
 
+    @Mock
+    private ICartServicePort cartServicePort;
+
     @InjectMocks
     private CartRestController cartRestController;
 
@@ -41,12 +45,14 @@ class CartRestControllerTest {
     private CartProduct cartProduct;
     private Cart cart;
     private CartResponse cartResponse;
+    private CustomPage<CartProductPage> mockCartProductPage;
+    private CartDto mockCartDto;
 
     @BeforeEach
     void setUp() {
         // Inicialización de objetos comunes a los tests
         addProductToCart = new AddProductToCart(1L, 2L);
-        cartProduct = new CartProduct(null, null, 1L, 2L, null, null);
+        cartProduct = new CartProduct(null, null, 1L, "Camiseta", 2L, null, null);
         cartProduct.setUnitPrice(BigDecimal.valueOf(100));
         cartProduct.setTotalPrice(BigDecimal.valueOf(200));
 
@@ -69,6 +75,9 @@ class CartRestControllerTest {
                 LocalDateTime.now(), // updatedAt
                 List.of(cartProduct) // products
         );
+
+        mockCartProductPage = createMockCartProductPage();
+        mockCartDto = createMockCartDto();
     }
 
     @Test
@@ -146,5 +155,69 @@ class CartRestControllerTest {
         // Verificar que no se llamó a los otros métodos
         verify(cartProductServicePort, never()).removeCartProduct(any(CartProduct.class));
         verify(cartResponseMapper, never()).toCartResponse(any(Cart.class));
+    }
+
+    @Test
+    void testGetAllProducts_Success() {
+        // Simular comportamientos del servicio y mapper
+        when(cartProductServicePort.getAllCartProducts(anyInt(), anyInt(), anyBoolean(), anyString(), anyString()))
+                .thenReturn(mockCartProductPage);
+        when(cartServicePort.getCartByClientId()).thenReturn(cart);
+        when(cartResponseMapper.toCartDto(any(Cart.class))).thenReturn(mockCartDto);
+        when(cartResponseMapper.toPageProductDto(any(CustomPage.class)))
+                .thenReturn(mockCartProductPageToProductDto());
+
+        // Llamada al controlador
+        ResponseEntity<ListCartProducts> response = cartRestController.getAllProducts(0, 10, "asc", "Electrónica", "Nike");
+
+        // Verificar la respuesta
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(mockCartDto, response.getBody().getCart());
+        assertNotNull(response.getBody().getProducts());
+        assertEquals(1, response.getBody().getProducts().getContent().size());
+    }
+
+    // Métodos auxiliares para crear objetos de prueba
+
+    private CustomPage<CartProductPage> createMockCartProductPage() {
+        CartProductPage product = new CartProductPage.CartProductPageBuilder().build();
+        product.setCartProductId(1L);
+        product.setProductId(101L);
+        product.setName("Producto Test");
+        product.setStockQuantity(100L);
+        product.setTotalQuantityInCart(2L);
+        product.setUnitPrice(new BigDecimal("50.00"));
+        product.setTotalPrice(new BigDecimal("100.00"));
+        product.setCategories(Arrays.asList(new Category(1L, "Electrónica")));
+        product.setBrand(new Brand(1L, "Nike"));
+
+        CustomPage<CartProductPage> page = new CustomPage<>();
+        page.setPageNumber(0);
+        page.setPageSize(10);
+        page.setTotalElements(1L);
+        page.setTotalPages(1);
+        page.setContent(List.of(product));
+
+        return page;
+    }
+
+    private CartDto createMockCartDto() {
+        return new CartDto(1L, 1001L, 2L, new BigDecimal("100.00"), LocalDateTime.now(), LocalDateTime.now());
+    }
+
+    private CustomPage<ProductDto> mockCartProductPageToProductDto() {
+        ProductDto productDto = new ProductDto(
+                1L, 101L, "Producto Test", 100L, null, 2L, new BigDecimal("50.00"), new BigDecimal("100.00"),
+                Arrays.asList(new CategoryDto(1L, "Electrónica")), new BrandDto(1L, "Nike"));
+
+        CustomPage<ProductDto> pageDto = new CustomPage<>();
+        pageDto.setPageNumber(0);
+        pageDto.setPageSize(10);
+        pageDto.setTotalElements(1L);
+        pageDto.setTotalPages(1);
+        pageDto.setContent(List.of(productDto));
+
+        return pageDto;
     }
 }

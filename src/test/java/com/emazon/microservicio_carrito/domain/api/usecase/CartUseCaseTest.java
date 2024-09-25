@@ -93,13 +93,13 @@ class CartUseCaseTest {
     void getCartByClientId_shouldReturnCartWithProducts_whenCartExists() {
         // Arrange
         Cart cart = new Cart(1L, 1L, 10L, new BigDecimal("1000"), LocalDateTime.now(), LocalDateTime.now(), new ArrayList<>());
-        List<CartProduct> products = List.of(new CartProduct(1L, 1L, 1L, 10L, new BigDecimal("100"), new BigDecimal("1000")));
+        List<CartProduct> products = List.of(new CartProduct(1L, 1L, 1L, "camiseta", 10L, new BigDecimal("100"), new BigDecimal("1000")));
 
         when(cartPersistencePort.getCartByClientId(1L)).thenReturn(Optional.of(cart));
         when(cartProductPersistencePort.getAllProducts(cart.getCartId())).thenReturn(products);
 
         // Act
-        Cart result = cartUseCase.getCartByClientId(1L);
+        Cart result = cartUseCase.getCartByClientId();
 
         // Assert
         assertEquals(cart, result);
@@ -114,7 +114,7 @@ class CartUseCaseTest {
         when(cartPersistencePort.getCartByClientId(1L)).thenReturn(Optional.empty());
 
         // Act
-        Cart result = cartUseCase.getCartByClientId(1L);
+        Cart result = cartUseCase.getCartByClientId();
 
         // Assert
         assertNull(result);
