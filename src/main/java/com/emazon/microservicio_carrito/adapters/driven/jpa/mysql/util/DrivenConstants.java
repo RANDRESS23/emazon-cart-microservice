@@ -17,6 +17,7 @@ public class DrivenConstants {
     public static final String CART_PRODUCT_TABLE_NAME = "cart_products";
     public static final String COLUMN_CART_PRODUCT_ID = "cart_product_id";
     public static final String COLUMN_CART_PRODUCT_PRODUCT_ID = "product_id";
+    public static final String COLUMN_CART_PRODUCT_NAME = "name";
     public static final String COLUMN_CART_PRODUCT_QUANTITY = "quantity";
 
     public static final String AUTHORIZATION_HEADER  = "Authorization";

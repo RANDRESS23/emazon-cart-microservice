@@ -18,6 +18,11 @@ public class DomainConstants {
     public static final String FIELD_CREATED_AT_NULL_MESSAGE = "Field 'createdAt' cannot be null";
     public static final String FIELD_UPDATED_AT_NULL_MESSAGE = "Field 'updatedAt' cannot be null";
 
+    public static final String SORT_BY_PRODUCT_NAME = "name";
+
+    public static final String DEFAULT_CATEGORY_PARAM = "all";
+    public static final String DEFAULT_BRAND_PARAM = "all";
+
     public static final String CART_ALREADY_EXISTS_MESSAGE = "Cart already exists.";
     public static final String CART_NOT_FOUND = "Cart not found.";
 
@@ -33,4 +38,7 @@ public class DomainConstants {
 
     public static final String INVALID_ADD_PRODUCT_QUANTITY_MESSAGE = "The quantity of the product you want to add to the cart exceeds the amount of stock available for the product.";
     public static final String INVALID_REMOVE_PRODUCT_QUANTITY_FROM_CART_MESSAGE = "The quantity of the product you want to remove from the cart exceeds the quantity of the product that is in the cart.";
+
+    public static final String MESSAGE_PREFIX = "\"message\":\"";
+    public static final String QUOTE = "\"";
 }
