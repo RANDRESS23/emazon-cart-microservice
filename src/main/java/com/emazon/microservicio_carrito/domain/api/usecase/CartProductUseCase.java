@@ -7,7 +7,6 @@ import com.emazon.microservicio_carrito.domain.model.*;
 import com.emazon.microservicio_carrito.domain.spi.*;
 import com.emazon.microservicio_carrito.domain.util.DomainConstants;
 import com.emazon.microservicio_carrito.domain.validation.CartProductValidation;
-import feign.FeignException;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -37,7 +36,7 @@ public class CartProductUseCase implements ICartProductServicePort {
     public Cart saveCartProduct(CartProduct cartProduct) {
         try {
             Long clientId = authPersistencePort.getAuthenticatedUserId();
-            Cart clientCart = cartServicePort.getCartByClientId(clientId);
+            Cart clientCart = cartServicePort.getCartByClientId();
             cartProductValidation.validateCartProduct(cartProduct);
 
             Product productResponse = stockPersistencePort.verifyProduct(cartProduct.getProductId());
@@ -49,19 +48,16 @@ public class CartProductUseCase implements ICartProductServicePort {
             }
 
             return clientCart;
-        } catch (FeignException fe) {
-            String errorMessage = extractMessageFromError(fe.getMessage());
+        } catch (Exception exception) {
+            String errorMessage = extractMessageFromError(exception.getMessage());
             throw new RemoteServiceException(errorMessage);
-        } catch (Exception e) {
-            throw e;
         }
     }
 
     @Override
     public Cart removeCartProduct(CartProduct cartProduct) {
         try {
-            Long clientId = authPersistencePort.getAuthenticatedUserId();
-            Cart clientCart = cartServicePort.getCartByClientId(clientId);
+            Cart clientCart = cartServicePort.getCartByClientId();
 
             if (clientCart == null) {
                 throw new NotFoundException(DomainConstants.CART_NOT_FOUND);
@@ -78,29 +74,113 @@ public class CartProductUseCase implements ICartProductServicePort {
                 setClientCartValues(clientCart, cartProduct, productResponse, newCartProducts);
 
                 return cartServicePort.updateCart(clientCart);
-            } else {
-                cartProductPersistencePort.saveCartProduct(cartProduct);
-                setClientCartValues(clientCart, cartProduct, productResponse, cartProducts);
-
-                return cartServicePort.updateCart(clientCart);
             }
 
-        } catch (FeignException fe) {
-            String errorMessage = extractMessageFromError(fe.getMessage());
+            cartProductPersistencePort.saveCartProduct(cartProduct);
+            setClientCartValues(clientCart, cartProduct, productResponse, cartProducts);
+
+            return cartServicePort.updateCart(clientCart);
+        } catch (Exception exception) {
+            String errorMessage = extractMessageFromError(exception.getMessage());
             throw new RemoteServiceException(errorMessage);
-        } catch (Exception e) {
-            throw e;
         }
     }
 
-    private static List<CartProduct> getCartProducts(CartProduct cartProduct, Cart clientCart, Product productResponse, AtomicBoolean isTotalProductQuantity, List<CartProduct> newCartProducts) {
+    @Override
+    public CustomPage<CartProductPage> getAllCartProducts(Integer page, Integer size, Boolean ascending, String category, String brand) {
+        try {
+            Cart clientCart = cartServicePort.getCartByClientId();
+
+            if (clientCart == null) throw new NotFoundException(DomainConstants.CART_NOT_FOUND);
+
+            CustomPage<CartProduct> cartProducts = cartProductPersistencePort.getAllCartProducts(page, size, ascending, clientCart.getCartId());
+            List<CartProductPage> listOfProductPage = cartProducts.getContent().stream().map(cartProduct -> {
+                Product product = stockPersistencePort.verifyProduct(cartProduct.getProductId());
+                return createCartProductPage(cartProduct, product);
+            }).toList();
+
+            CustomPage<CartProductPage> customCartProductPage = new CustomPage<>();
+            setCustomPageValues(customCartProductPage, cartProducts, listOfProductPage);
+
+            if (!category.equals(DomainConstants.DEFAULT_CATEGORY_PARAM)) {
+                filterProductsByCategory(customCartProductPage, category);
+            }
+
+            if (!brand.equals(DomainConstants.DEFAULT_BRAND_PARAM)) {
+                filterProductsByBrand(customCartProductPage, brand);
+            }
+
+            return customCartProductPage;
+        } catch (Exception exception) {
+            String errorMessage = extractMessageFromError(exception.getMessage());
+            throw new RemoteServiceException(errorMessage);
+        }
+    }
+
+    public void filterProductsByCategory(CustomPage<CartProductPage> customCartProductPage, String category) {
+        List<CartProductPage> productsFilteredByCategory = customCartProductPage
+            .getContent()
+            .stream()
+            .filter(cartProductPageItem ->
+                cartProductPageItem.getCategories()
+                    .stream()
+                    .anyMatch(item -> category.equalsIgnoreCase(item.getName()))
+            )
+            .toList();
+
+        customCartProductPage.setContent(productsFilteredByCategory);
+        customCartProductPage.setTotalElements(productsFilteredByCategory.size());
+    }
+
+    public void filterProductsByBrand(CustomPage<CartProductPage> customCartProductPage, String brand) {
+        List<CartProductPage> productsFilteredByBrand = customCartProductPage
+            .getContent()
+            .stream()
+            .filter(cartProductPageItem -> brand.equalsIgnoreCase(cartProductPageItem.getBrand().getName()))
+            .toList();
+
+        customCartProductPage.setContent(productsFilteredByBrand);
+        customCartProductPage.setTotalElements(productsFilteredByBrand.size());
+    }
+
+    public CartProductPage createCartProductPage(CartProduct cartProduct, Product product) {
+        LocalDate nextSupplyDate = null;
+
+        if (product.getQuantity() < cartProduct.getQuantity()) {
+            Supply supplyResponse = transactionPersistencePort.verifySupply(cartProduct.getProductId());
+            nextSupplyDate = supplyResponse.getDate().plusDays(DomainConstants.DAYS_FOR_SUPPLY);
+        }
+
+        return new CartProductPage.CartProductPageBuilder()
+            .cartProductId(cartProduct.getCartProductId())
+            .productId(product.getProductId())
+            .name(product.getName())
+            .stockQuantity(product.getQuantity())
+            .nextSupplyDate(nextSupplyDate)
+            .totalQuantityInCart(cartProduct.getQuantity())
+            .unitPrice(cartProduct.getUnitPrice())
+            .totalPrice(cartProduct.getTotalPrice())
+            .categories(product.getCategories())
+            .brand(product.getBrand())
+            .build();
+    }
+
+    public void setCustomPageValues(CustomPage<CartProductPage> customPage, CustomPage<CartProduct> cartProducts, List<CartProductPage> listOfProductPage) {
+        customPage.setPageNumber(cartProducts.getPageNumber());
+        customPage.setPageSize(cartProducts.getPageSize());
+        customPage.setTotalElements(cartProducts.getTotalElements());
+        customPage.setTotalPages(cartProducts.getTotalPages());
+        customPage.setContent(listOfProductPage);
+    }
+
+    public static List<CartProduct> getCartProducts(CartProduct cartProduct, Cart clientCart, Product productResponse, AtomicBoolean isTotalProductQuantity, List<CartProduct> newCartProducts) {
         List<CartProduct> cartProducts = clientCart.getProducts();
         AtomicBoolean isExistsCartProductInTheCart = new AtomicBoolean(false);
 
-        cartProducts.forEach(p -> {
-            if (p.getProductId().equals(cartProduct.getProductId())) {
-                validateEqualsProduct(cartProduct, p, isExistsCartProductInTheCart, isTotalProductQuantity, productResponse);
-            } else newCartProducts.add(p);
+        cartProducts.forEach(focusedCartProduct -> {
+            if (focusedCartProduct.getProductId().equals(cartProduct.getProductId())) {
+                validateEqualsProduct(cartProduct, focusedCartProduct, isExistsCartProductInTheCart, isTotalProductQuantity, productResponse);
+            } else newCartProducts.add(focusedCartProduct);
         });
 
         if (!isExistsCartProductInTheCart.get()) {
@@ -110,12 +190,13 @@ public class CartProductUseCase implements ICartProductServicePort {
         return cartProducts;
     }
 
-    public static void setCartProductValues(CartProduct cartProduct, CartProduct p) {
-        cartProduct.setCartProductId(p.getCartProductId());
-        cartProduct.setCartId(p.getCartId());
-        cartProduct.setUnitPrice(p.getUnitPrice());
-        cartProduct.setTotalPrice(p.getTotalPrice());
-        cartProduct.setQuantity(p.getQuantity());
+    public static void setCartProductValues(CartProduct cartProduct, CartProduct focusedCartProduct) {
+        cartProduct.setCartProductId(focusedCartProduct.getCartProductId());
+        cartProduct.setCartId(focusedCartProduct.getCartId());
+        cartProduct.setName(focusedCartProduct.getName());
+        cartProduct.setUnitPrice(focusedCartProduct.getUnitPrice());
+        cartProduct.setTotalPrice(focusedCartProduct.getTotalPrice());
+        cartProduct.setQuantity(focusedCartProduct.getQuantity());
     }
 
     public void setClientCartValues(Cart clientCart, CartProduct cartProduct, Product productResponse, List<CartProduct> newCartProducts) {
@@ -124,22 +205,22 @@ public class CartProductUseCase implements ICartProductServicePort {
         clientCart.setProducts(newCartProducts);
     }
 
-    public static void validateEqualsProduct(CartProduct cartProduct, CartProduct p, AtomicBoolean isExistsCartProductInTheCart, AtomicBoolean isTotalProductQuantity, Product productResponse) {
-        if (cartProduct.getQuantity() > p.getQuantity()) {
+    public static void validateEqualsProduct(CartProduct cartProduct, CartProduct focusedCartProduct, AtomicBoolean isExistsCartProductInTheCart, AtomicBoolean isTotalProductQuantity, Product productResponse) {
+        if (cartProduct.getQuantity() > focusedCartProduct.getQuantity()) {
             throw new InvalidProductQuantityException(DomainConstants.INVALID_REMOVE_PRODUCT_QUANTITY_FROM_CART_MESSAGE);
         }
 
         isExistsCartProductInTheCart.set(true);
 
-        if (cartProduct.getQuantity().equals(p.getQuantity())) {
-            setCartProductValues(cartProduct, p);
+        if (cartProduct.getQuantity().equals(focusedCartProduct.getQuantity())) {
+            setCartProductValues(cartProduct, focusedCartProduct);
 
             isTotalProductQuantity.set(true);
         } else {
-            p.setQuantity(p.getQuantity() - cartProduct.getQuantity());
-            p.setTotalPrice(p.getTotalPrice().subtract(productResponse.getPrice().multiply(BigDecimal.valueOf(cartProduct.getQuantity()))));
+            focusedCartProduct.setQuantity(focusedCartProduct.getQuantity() - cartProduct.getQuantity());
+            focusedCartProduct.setTotalPrice(focusedCartProduct.getTotalPrice().subtract(productResponse.getPrice().multiply(BigDecimal.valueOf(cartProduct.getQuantity()))));
 
-            setCartProductValues(cartProduct, p);
+            setCartProductValues(cartProduct, focusedCartProduct);
         }
     }
 
@@ -162,6 +243,7 @@ public class CartProductUseCase implements ICartProductServicePort {
 
     public CartProduct saveCartProductInBD(Cart clientCart, CartProduct cartProduct, Product productResponse) {
         cartProduct.setCartId(clientCart.getCartId());
+        cartProduct.setName(productResponse.getName());
         cartProduct.setUnitPrice(productResponse.getPrice());
         cartProduct.setTotalPrice(
                 productResponse.getPrice().multiply(BigDecimal.valueOf(cartProduct.getQuantity()))
@@ -172,6 +254,7 @@ public class CartProductUseCase implements ICartProductServicePort {
 
     public CartProduct saveExistCartProductInBD(Cart clientCart, CartProduct cartProduct, AtomicBoolean isSameProduct, Product productResponse) {
         cartProduct.setCartId(clientCart.getCartId());
+        cartProduct.setName(productResponse.getName());
         cartProduct.setUnitPrice(productResponse.getPrice());
 
         if (!isSameProduct.get()) {
@@ -186,7 +269,7 @@ public class CartProductUseCase implements ICartProductServicePort {
     public Cart verifyCategoriesQuantity(Cart clientCart, CartProduct cartProduct, Product productResponse) {
         AtomicBoolean isSameProduct = new AtomicBoolean(false);
         List<CartProduct> cartProducts = clientCart.getProducts();
-        List<Long> cartProductCategoryIds = productResponse.getCategories();
+        List<Long> cartProductCategoryIds = productResponse.getCategories().stream().map(Category::getCategoryId).toList();
         long countProductsInSameCategories = getCountProductsInSameCategories(cartProduct, productResponse, cartProducts, isSameProduct, cartProductCategoryIds);
 
         if (countProductsInSameCategories < DomainConstants.MAXIMUM_QUANTITY_OF_PRODUCTS_OF_THE_SAME_CATEGORY) {
@@ -210,26 +293,28 @@ public class CartProductUseCase implements ICartProductServicePort {
 
     public long getCountProductsInSameCategories(CartProduct cartProduct, Product productResponse, List<CartProduct> cartProducts, AtomicBoolean isSameProduct, List<Long> cartProductCategoryIds) {
         return cartProducts.stream()
-            .filter(p -> {
-                if (p.getProductId().equals(cartProduct.getProductId())) {
-                    return updateCartProductQuantityAndPrice(p, cartProduct, productResponse, isSameProduct);
+            .filter(focusedCartProduct -> {
+                if (focusedCartProduct.getProductId().equals(cartProduct.getProductId())) {
+                    return updateCartProductQuantityAndPrice(focusedCartProduct, cartProduct, productResponse, isSameProduct);
                 }
 
-                List<Long> productCategories = stockPersistencePort.verifyProduct(p.getProductId()).getCategories();
+                List<Long> productCategories = stockPersistencePort.verifyProduct(focusedCartProduct.getProductId()).getCategories()
+                        .stream().map(Category::getCategoryId)
+                        .toList();
                 return productCategories.stream().anyMatch(cartProductCategoryIds::contains);
             })
             .count();
     }
 
-    public boolean updateCartProductQuantityAndPrice(CartProduct p, CartProduct cartProduct, Product productResponse, AtomicBoolean isSameProduct) {
-        if ((p.getQuantity() + cartProduct.getQuantity()) > productResponse.getQuantity()) {
+    public boolean updateCartProductQuantityAndPrice(CartProduct focusedCartProduct, CartProduct cartProduct, Product productResponse, AtomicBoolean isSameProduct) {
+        if ((focusedCartProduct.getQuantity() + cartProduct.getQuantity()) > productResponse.getQuantity()) {
             throw new InvalidProductQuantityException(DomainConstants.INVALID_ADD_PRODUCT_QUANTITY_MESSAGE);
         }
 
         BigDecimal totalPriceProduct = productResponse.getPrice().multiply(BigDecimal.valueOf(cartProduct.getQuantity()));
-        cartProduct.setCartProductId(p.getCartProductId());
-        cartProduct.setQuantity(cartProduct.getQuantity() + p.getQuantity());
-        cartProduct.setTotalPrice(totalPriceProduct.add(p.getTotalPrice()));
+        cartProduct.setCartProductId(focusedCartProduct.getCartProductId());
+        cartProduct.setQuantity(cartProduct.getQuantity() + focusedCartProduct.getQuantity());
+        cartProduct.setTotalPrice(totalPriceProduct.add(focusedCartProduct.getTotalPrice()));
         isSameProduct.set(true);
 
         return false;
@@ -249,7 +334,7 @@ public class CartProductUseCase implements ICartProductServicePort {
     }
 
     private String extractMessageFromError(String errorResponse) {
-        String key = "\"message\":\"";
+        String key = DomainConstants.MESSAGE_PREFIX;
         int startIndex = errorResponse.indexOf(key);
 
         if (startIndex == DomainConstants.MINUS_ONE) {
@@ -257,7 +342,7 @@ public class CartProductUseCase implements ICartProductServicePort {
         }
 
         startIndex += key.length();
-        int endIndex = errorResponse.indexOf("\"", startIndex);
+        int endIndex = errorResponse.indexOf(DomainConstants.QUOTE, startIndex);
 
         if (endIndex == DomainConstants.MINUS_ONE) {
             return DomainConstants.UNKNOWN_ERROR_OCCURRED_MESSAGE;
