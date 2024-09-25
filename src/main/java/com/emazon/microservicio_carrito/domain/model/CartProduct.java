@@ -10,14 +10,16 @@ public class CartProduct {
     private Long cartProductId;
     private Long cartId;
     private final Long productId;
+    private String name;
     private Long quantity;
     private BigDecimal unitPrice;
     private BigDecimal totalPrice;
 
-    public CartProduct(Long cartProductId, Long cartId, Long productId, Long quantity, BigDecimal unitPrice, BigDecimal totalPrice) {
+    public CartProduct(Long cartProductId, Long cartId, Long productId, String name, Long quantity, BigDecimal unitPrice, BigDecimal totalPrice) {
         this.cartProductId = cartProductId;
         this.cartId = cartId;
         this.productId = requireNonNull(productId, DomainConstants.FIELD_PRODUCT_ID_NULL_MESSAGE);
+        this.name = name;
         this.quantity = requireNonNull(quantity, DomainConstants.FIELD_QUANTITY_NULL_MESSAGE);
         this.unitPrice = unitPrice;
         this.totalPrice = totalPrice;
@@ -33,6 +35,10 @@ public class CartProduct {
 
     public Long getProductId() {
         return productId;
+    }
+
+    public String getName() {
+        return name;
     }
 
     public Long getQuantity() {
@@ -53,6 +59,10 @@ public class CartProduct {
 
     public void setCartId(Long cartId) {
         this.cartId = cartId;
+    }
+
+    public void setName(String name) {
+        this.name = name;
     }
 
     public void setQuantity(Long quantity) {

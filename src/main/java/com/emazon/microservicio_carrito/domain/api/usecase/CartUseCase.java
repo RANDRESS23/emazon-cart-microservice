@@ -54,7 +54,9 @@ public class CartUseCase implements ICartServicePort {
     }
 
     @Override
-    public Cart getCartByClientId(Long clientId) {
+    public Cart getCartByClientId() {
+        Long clientId = authPersistencePort.getAuthenticatedUserId();
+
         Cart cart = cartPersistencePort.getCartByClientId(clientId)
                 .orElse(null);
 
