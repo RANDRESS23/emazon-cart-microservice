@@ -5,19 +5,27 @@ import java.util.List;
 
 public class Product {
     private final Long productId;
+    private final String name;
     private final Long quantity;
     private final BigDecimal price;
-    private List<Long> categories;
+    private List<Category> categories;
+    private Brand brand;
 
-    public Product(Long productId, Long quantity, BigDecimal price, List<Long> categories) {
+    public Product(Long productId, String name, Long quantity, BigDecimal price, List<Category> categories, Brand brand) {
         this.productId = productId;
+        this.name = name;
         this.quantity = quantity;
         this.price = price;
         this.categories = categories;
+        this.brand = brand;
     }
 
     public Long getProductId() {
         return productId;
+    }
+
+    public String getName() {
+        return name;
     }
 
     public Long getQuantity() {
@@ -28,11 +36,19 @@ public class Product {
         return price;
     }
 
-    public List<Long> getCategories() {
+    public List<Category> getCategories() {
         return categories;
     }
 
-    public void setCategories(List<Long> categories) {
+    public Brand getBrand() {
+        return brand;
+    }
+
+    public void setCategories(List<Category> categories) {
         this.categories = categories;
+    }
+
+    public void setBrand(Brand brand) {
+        this.brand = brand;
     }
 }
