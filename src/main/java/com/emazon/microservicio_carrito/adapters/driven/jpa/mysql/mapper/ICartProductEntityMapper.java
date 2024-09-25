@@ -3,6 +3,8 @@ package com.emazon.microservicio_carrito.adapters.driven.jpa.mysql.mapper;
 import com.emazon.microservicio_carrito.adapters.driven.jpa.mysql.entity.CartProductEntity;
 import com.emazon.microservicio_carrito.domain.model.CartProduct;
 import org.mapstruct.Mapper;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 
 import java.util.List;
 
@@ -11,4 +13,11 @@ public interface ICartProductEntityMapper {
     CartProductEntity toEntity(CartProduct cartProduct);
     CartProduct toDomainModel(CartProductEntity cartProductEntity);
     List<CartProduct> toListOfCartProducts(List<CartProductEntity> listOfCartProductsEntity);
+
+    default Page<CartProduct> toPageOfCartProducts(Page<CartProductEntity> pageOfCartProductsEntity) {
+        List<CartProduct> dtoList = pageOfCartProductsEntity.getContent().stream()
+                .map(this::toDomainModel)
+                .toList();
+        return new PageImpl<>(dtoList, pageOfCartProductsEntity.getPageable(), pageOfCartProductsEntity.getTotalElements());
+    }
 }
