@@ -1,13 +1,18 @@
 package com.emazon.microservicio_carrito.adapters.driving.controller;
 
 import com.emazon.microservicio_carrito.adapters.driving.dto.request.AddProductToCart;
+import com.emazon.microservicio_carrito.adapters.driving.dto.response.CartDto;
 import com.emazon.microservicio_carrito.adapters.driving.dto.response.CartResponse;
+import com.emazon.microservicio_carrito.adapters.driving.dto.response.ListCartProducts;
 import com.emazon.microservicio_carrito.adapters.driving.mapper.ICartProductRequestMapper;
 import com.emazon.microservicio_carrito.adapters.driving.mapper.ICartResponseMapper;
 import com.emazon.microservicio_carrito.adapters.driving.util.DrivingConstants;
 import com.emazon.microservicio_carrito.domain.api.ICartProductServicePort;
+import com.emazon.microservicio_carrito.domain.api.ICartServicePort;
 import com.emazon.microservicio_carrito.domain.model.Cart;
 import com.emazon.microservicio_carrito.domain.model.CartProduct;
+import com.emazon.microservicio_carrito.domain.model.CartProductPage;
+import com.emazon.microservicio_carrito.domain.model.CustomPage;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -26,6 +31,7 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = DrivingConstants.TAG_CART_NAME, description = DrivingConstants.TAG_CART_DESCRIPTION)
 public class CartRestController {
     private final ICartProductServicePort cartProductServicePort;
+    private final ICartServicePort cartServicePort;
     private final ICartProductRequestMapper cartProductRequestMapper;
     private final ICartResponseMapper cartResponseMapper;
 
@@ -59,5 +65,27 @@ public class CartRestController {
         CartResponse response = cartResponseMapper.toCartResponse(cartUpdated);
 
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @Operation(summary = DrivingConstants.GET_CART_PRODUCTS_SUMMARY, description = DrivingConstants.GET_CART_PRODUCTS_DESCRIPTION)
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = DrivingConstants.RESPONSE_CODE_201, description = DrivingConstants.GET_CART_PRODUCTS_RESPONSE_200_DESCRIPTION),
+            @ApiResponse(responseCode = DrivingConstants.RESPONSE_CODE_400, description = DrivingConstants.GET_CART_PRODUCTS_RESPONSE_400_DESCRIPTION, content = @Content),
+            @ApiResponse(responseCode = DrivingConstants.RESPONSE_CODE_503, description = DrivingConstants.GET_CART_PRODUCTS_RESPONSE_503_DESCRIPTION, content = @Content)
+    })
+    @PreAuthorize(DrivingConstants.HAS_ROLE_CLIENT)
+    @GetMapping
+    public ResponseEntity<ListCartProducts> getAllProducts(
+            @RequestParam(defaultValue = DrivingConstants.DEFAULT_PAGE_PARAM) int page,
+            @RequestParam(defaultValue = DrivingConstants.DEFAULT_SIZE_PARAM) int size,
+            @RequestParam(defaultValue = DrivingConstants.DEFAULT_SORT_PARAM) String sortOrder,
+            @RequestParam(defaultValue = DrivingConstants.DEFAULT_CATEGORY_PARAM) String category,
+            @RequestParam(defaultValue = DrivingConstants.DEFAULT_BRAND_PARAM) String brand) {
+        boolean ascending = DrivingConstants.DEFAULT_SORT_PARAM.equalsIgnoreCase(sortOrder);
+        CustomPage<CartProductPage> cartProductPage = cartProductServicePort.getAllCartProducts(page, size, ascending, category, brand);
+        CartDto cart = cartResponseMapper.toCartDto(cartServicePort.getCartByClientId());
+        ListCartProducts responsePage = new ListCartProducts(cart, cartResponseMapper.toPageProductDto(cartProductPage));
+
+        return new ResponseEntity<>(responsePage, HttpStatus.OK);
     }
 }
