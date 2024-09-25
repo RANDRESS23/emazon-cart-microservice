@@ -25,6 +25,9 @@ public class CartProductEntity {
     @Column(name = DrivenConstants.COLUMN_CART_PRODUCT_PRODUCT_ID, nullable = false)
     private Long productId;
 
+    @Column(name = DrivenConstants.COLUMN_CART_PRODUCT_NAME, nullable = false)
+    private String name;
+
     @Column(name = DrivenConstants.COLUMN_CART_PRODUCT_QUANTITY, nullable = false)
     private Long quantity;
 
