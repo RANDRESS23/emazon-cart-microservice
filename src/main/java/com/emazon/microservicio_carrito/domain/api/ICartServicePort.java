@@ -6,4 +6,5 @@ public interface ICartServicePort {
     Cart saveCart(Cart cart);
     Cart updateCart(Cart cart);
     Cart getCartByClientId();
+    void buyCartProducts();
 }

@@ -1,12 +1,12 @@
 package com.emazon.microservicio_carrito.domain.api.usecase;
 
 import com.emazon.microservicio_carrito.domain.exception.AlreadyExistsFieldException;
+import com.emazon.microservicio_carrito.domain.exception.RemoteServiceException;
 import com.emazon.microservicio_carrito.domain.model.Cart;
 import com.emazon.microservicio_carrito.domain.model.CartProduct;
-import com.emazon.microservicio_carrito.domain.spi.IAuthPersistencePort;
-import com.emazon.microservicio_carrito.domain.spi.ICartPersistencePort;
-import com.emazon.microservicio_carrito.domain.spi.ICartProductPersistencePort;
+import com.emazon.microservicio_carrito.domain.spi.*;
 import com.emazon.microservicio_carrito.domain.util.DomainConstants;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -16,6 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -33,8 +34,22 @@ class CartUseCaseTest {
     @Mock
     private IAuthPersistencePort authPersistencePort;
 
+    @Mock
+    private ITransactionPersistencePort transactionPersistencePort;
+
+    @Mock
+    private IReportPersistencePort reportPersistencePort;
+
     @InjectMocks
     private CartUseCase cartUseCase;
+
+    public Cart cart2;
+
+    @BeforeEach
+    void setUp() {
+        // Crear un carrito válido para usar en los tests
+        cart2 = createMockCart();
+    }
 
     @Test
     void saveCart_shouldSaveCart_whenCartDoesNotExist() {
@@ -120,5 +135,26 @@ class CartUseCaseTest {
         assertNull(result);
         verify(cartPersistencePort, times(1)).getCartByClientId(1L);
         verify(cartProductPersistencePort, times(0)).getAllProducts(anyLong());  // No debe buscar productos
+    }
+
+    @Test
+    void buyCartProducts_shouldThrowNotFoundException_whenCartNotFound() {
+        // Simular que no se encuentra un carrito
+        when(cartPersistencePort.getCartByClientId(1000L)).thenReturn(null);
+
+        // Llamar al método bajo prueba y verificar que lanza la excepción
+        assertThrows(RemoteServiceException.class, () -> cartUseCase.buyCartProducts());
+
+        // Verificar que no se hagan interacciones adicionales con otros puertos
+        verifyNoInteractions(cartProductPersistencePort, transactionPersistencePort, reportPersistencePort);
+    }
+
+    // Método auxiliar para crear un carrito simulado
+    private Cart createMockCart() {
+        List<CartProduct> products = Arrays.asList(
+                new CartProduct(1L, 1L, 1L, "Product 1", 2L, new BigDecimal("10.00"), new BigDecimal("20.00")),
+                new CartProduct(2L, 1L, 2L, "Product 2", 3L, new BigDecimal("15.00"), new BigDecimal("45.00"))
+        );
+        return new Cart(1L, 123L, 5L, new BigDecimal("65.00"), LocalDateTime.now(), LocalDateTime.now(), products);
     }
 }

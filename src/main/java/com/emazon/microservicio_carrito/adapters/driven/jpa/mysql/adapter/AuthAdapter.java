@@ -21,4 +21,12 @@ public class AuthAdapter implements IAuthPersistencePort {
 
         return jwtService.extractUserId(token);
     }
+
+    @Override
+    public String getAuthenticatedUserEmail() {
+        HttpServletRequest request = ((ServletRequestAttributes) Objects.requireNonNull(RequestContextHolder.getRequestAttributes())).getRequest();
+        String token = request.getHeader(DrivenConstants.AUTHORIZATION_HEADER).substring(7);
+
+        return jwtService.extractEmail(token);
+    }
 }
