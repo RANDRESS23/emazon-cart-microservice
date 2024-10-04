@@ -4,6 +4,8 @@ import com.emazon.microservicio_carrito.adapters.driving.dto.request.AddProductT
 import com.emazon.microservicio_carrito.adapters.driving.dto.response.*;
 import com.emazon.microservicio_carrito.adapters.driving.mapper.ICartProductRequestMapper;
 import com.emazon.microservicio_carrito.adapters.driving.mapper.ICartResponseMapper;
+import com.emazon.microservicio_carrito.adapters.driving.service.CartService;
+import com.emazon.microservicio_carrito.adapters.driving.util.DrivingConstants;
 import com.emazon.microservicio_carrito.domain.api.ICartProductServicePort;
 import com.emazon.microservicio_carrito.domain.api.ICartServicePort;
 import com.emazon.microservicio_carrito.domain.model.*;
@@ -37,6 +39,9 @@ class CartRestControllerTest {
 
     @Mock
     private ICartServicePort cartServicePort;
+
+    @Mock
+    private CartService cartService;
 
     @InjectMocks
     private CartRestController cartRestController;
@@ -176,6 +181,24 @@ class CartRestControllerTest {
         assertEquals(mockCartDto, response.getBody().getCart());
         assertNotNull(response.getBody().getProducts());
         assertEquals(1, response.getBody().getProducts().getContent().size());
+    }
+
+    @Test
+    void buyProducts_shouldCallServiceAndReturnCorrectResponse() {
+        // Llamar al método bajo prueba
+        ResponseEntity<CartProductsBoughtDto> response = cartRestController.buyProducts();
+
+        // Verificar que el servicio fue llamado correctamente
+        verify(cartService, times(1)).buyCartProducts();
+
+        // Verificar que no haya más interacciones inesperadas
+        verifyNoMoreInteractions(cartService);
+
+        // Verificar que la respuesta contiene el mensaje esperado
+        assertEquals(DrivingConstants.CART_PRODUCTS_BOUGHT_MESSAGE, response.getBody().getMessage());
+
+        // Verificar que el estado HTTP sea 200 OK
+        assertEquals(HttpStatus.OK, response.getStatusCode());
     }
 
     // Métodos auxiliares para crear objetos de prueba
