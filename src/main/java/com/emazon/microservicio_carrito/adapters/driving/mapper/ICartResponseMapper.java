@@ -16,8 +16,8 @@ public interface ICartResponseMapper {
 
     default CustomPage<ProductDto> toPageProductDto(CustomPage<CartProductPage> cartProductPage) {
         List<ProductDto> dtoList = cartProductPage.getContent().stream()
-                .map(this::toProductDto)
-                .toList();
+            .map(this::toProductDto)
+            .toList();
 
         CustomPage<ProductDto> productDtoPage = new CustomPage<>();
         productDtoPage.setPageNumber(cartProductPage.getPageNumber());
