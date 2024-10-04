@@ -49,6 +49,13 @@ public class ControllerAdvisor {
                 HttpStatus.BAD_REQUEST.toString(), LocalDateTime.now()));
     }
 
+    @ExceptionHandler(EmptyCartException.class)
+    public ResponseEntity<ExceptionResponse> handleEmptyCartException(EmptyCartException exception) {
+        return ResponseEntity.badRequest().body(new ExceptionResponse(
+                String.format(exception.getMessage()),
+                HttpStatus.BAD_REQUEST.toString(), LocalDateTime.now()));
+    }
+
     @ExceptionHandler(NullPointerException.class)
     public ResponseEntity<ExceptionResponse> handleNullPointerException(NullPointerException exception) {
         return ResponseEntity.badRequest().body(new ExceptionResponse(
