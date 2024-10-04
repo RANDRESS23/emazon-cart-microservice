@@ -1,5 +1,6 @@
 package com.emazon.microservicio_carrito.adapters.driven.jpa.mysql.adapter;
 
+import com.emazon.microservicio_carrito.adapters.driving.dto.request.UpdateProductQuantityRequest;
 import com.emazon.microservicio_carrito.adapters.driving.dto.response.ProductResponse;
 import com.emazon.microservicio_carrito.adapters.driving.mapper.IProductResponseMapper;
 import com.emazon.microservicio_carrito.configuration.feign.IStockFeignClient;
@@ -16,5 +17,12 @@ public class StockAdapter implements IStockPersistencePort {
     public Product verifyProduct(Long productId) {
         ProductResponse productResponse = stockFeignClient.getProductById(productId);
         return productResponseMapper.toDomainModel(productResponse);
+    }
+
+    @Override
+    public void updateProductQuantity(Long productId, Long quantity, boolean isAddProductQuantity) {
+        UpdateProductQuantityRequest request = new UpdateProductQuantityRequest(productId, quantity, isAddProductQuantity);
+
+        stockFeignClient.updateProductQuantity(request);
     }
 }

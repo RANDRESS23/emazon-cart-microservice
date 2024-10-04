@@ -12,6 +12,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -30,6 +31,12 @@ public class CartProductAdapter implements ICartProductPersistencePort {
     public void removeCartProduct(CartProduct cartProduct) {
         CartProductEntity cartProductEntity = cartProductEntityMapper.toEntity(cartProduct);
         cartProductRepository.delete(cartProductEntity);
+    }
+
+    @Transactional
+    @Override
+    public void removeAllCartProducts(Long cartId) {
+        cartProductRepository.removeAllCartProducts(cartId);
     }
 
     @Override

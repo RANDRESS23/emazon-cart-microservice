@@ -23,6 +23,6 @@ public class CartAdapter implements ICartPersistencePort {
     @Override
     public Optional<Cart> getCartByClientId(Long clientId) {
         return cartRepository.findByClientId(clientId)
-                .map(cartEntityMapper::toDomainModel);
+            .map(cartEntityMapper::toDomainModel);
     }
 }
