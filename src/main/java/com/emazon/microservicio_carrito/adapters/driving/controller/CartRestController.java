@@ -2,10 +2,12 @@ package com.emazon.microservicio_carrito.adapters.driving.controller;
 
 import com.emazon.microservicio_carrito.adapters.driving.dto.request.AddProductToCart;
 import com.emazon.microservicio_carrito.adapters.driving.dto.response.CartDto;
+import com.emazon.microservicio_carrito.adapters.driving.dto.response.CartProductsBoughtDto;
 import com.emazon.microservicio_carrito.adapters.driving.dto.response.CartResponse;
 import com.emazon.microservicio_carrito.adapters.driving.dto.response.ListCartProducts;
 import com.emazon.microservicio_carrito.adapters.driving.mapper.ICartProductRequestMapper;
 import com.emazon.microservicio_carrito.adapters.driving.mapper.ICartResponseMapper;
+import com.emazon.microservicio_carrito.adapters.driving.service.CartService;
 import com.emazon.microservicio_carrito.adapters.driving.util.DrivingConstants;
 import com.emazon.microservicio_carrito.domain.api.ICartProductServicePort;
 import com.emazon.microservicio_carrito.domain.api.ICartServicePort;
@@ -32,6 +34,7 @@ import org.springframework.web.bind.annotation.*;
 public class CartRestController {
     private final ICartProductServicePort cartProductServicePort;
     private final ICartServicePort cartServicePort;
+    private final CartService cartService;
     private final ICartProductRequestMapper cartProductRequestMapper;
     private final ICartResponseMapper cartResponseMapper;
 
@@ -87,5 +90,15 @@ public class CartRestController {
         ListCartProducts responsePage = new ListCartProducts(cart, cartResponseMapper.toPageProductDto(cartProductPage));
 
         return new ResponseEntity<>(responsePage, HttpStatus.OK);
+    }
+
+    @PreAuthorize(DrivingConstants.HAS_ROLE_CLIENT)
+    @PostMapping("/buy")
+    public ResponseEntity<CartProductsBoughtDto> buyProducts() {
+        cartService.buyCartProducts();
+
+        CartProductsBoughtDto response = new CartProductsBoughtDto(DrivingConstants.CART_PRODUCTS_BOUGHT_MESSAGE);
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }
