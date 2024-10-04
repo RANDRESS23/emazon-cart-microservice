@@ -1,5 +1,7 @@
 package com.emazon.microservicio_carrito.domain.util;
 
+import java.math.BigDecimal;
+
 public class DomainConstants {
     private DomainConstants() {
         throw new IllegalStateException("Utility class");
@@ -9,6 +11,8 @@ public class DomainConstants {
     public static final Integer DAYS_FOR_SUPPLY = 30;
     public static final Integer MAXIMUM_QUANTITY_OF_PRODUCTS_OF_THE_SAME_CATEGORY = 3;
     public static final Integer MINUS_ONE = -1;
+    public static final Long QUANTITY_ZERO = 0L;
+    public static final BigDecimal TOTAL_PRICE_ZERO = new BigDecimal(0);
 
     public static final String FIELD_CLIENT_ID_NULL_MESSAGE = "Field 'clientId' cannot be null";
     public static final String FIELD_TOTAL_QUANTITY_NULL_MESSAGE = "Field 'total quantity' cannot be null";
@@ -25,6 +29,7 @@ public class DomainConstants {
 
     public static final String CART_ALREADY_EXISTS_MESSAGE = "Cart already exists.";
     public static final String CART_NOT_FOUND = "Cart not found.";
+    public static final String EMPTY_CART_MESSAGE = "No products were found in the cart.";
 
     public static final String CART_PRODUCT_NOT_FOUND = "The product was not found in the cart.";
 
@@ -37,6 +42,7 @@ public class DomainConstants {
     public static final String UNKNOWN_ERROR_OCCURRED_MESSAGE = "Unknown error occurred.";
 
     public static final String INVALID_ADD_PRODUCT_QUANTITY_MESSAGE = "The quantity of the product you want to add to the cart exceeds the amount of stock available for the product.";
+    public static final String INVALID_BUY_PRODUCT_QUANTITY_MESSAGE = "The quantity of the product you wish to purchase exceeds the amount of stock available for the product.";
     public static final String INVALID_REMOVE_PRODUCT_QUANTITY_FROM_CART_MESSAGE = "The quantity of the product you want to remove from the cart exceeds the quantity of the product that is in the cart.";
 
     public static final String MESSAGE_PREFIX = "\"message\":\"";

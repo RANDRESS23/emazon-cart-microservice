@@ -39,4 +39,6 @@ public class DrivingConstants {
     public static final String GET_CART_PRODUCTS_RESPONSE_200_DESCRIPTION = "Cart products successfully obtained";
     public static final String GET_CART_PRODUCTS_RESPONSE_400_DESCRIPTION = "Bad request";
     public static final String GET_CART_PRODUCTS_RESPONSE_503_DESCRIPTION = "Service unavailable";
+
+    public static final String CART_PRODUCTS_BOUGHT_MESSAGE = "Products bought successfully!";
 }

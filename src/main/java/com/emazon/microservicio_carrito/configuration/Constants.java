@@ -12,7 +12,10 @@ public class Constants {
     public static final String STOCK_SERVICE_URL = "http://localhost:8080/api/v1/product";
 
     public static final String TRANSACTION_SERVICE_NAME = "microservicio-transaccion";
-    public static final String TRANSACTION_SERVICE_URL = "http://localhost:8082/api/v1/supply";
+    public static final String TRANSACTION_SERVICE_URL = "http://localhost:8082/api/v1";
+
+    public static final String REPORT_SERVICE_NAME = "microservicio-reporte";
+    public static final String REPORT_SERVICE_URL = "http://localhost:8084/api/v1/report";
 
     public static final String AUTHORIZATION_HEADER  = "Authorization";
     public static final String BEARER_HEADER  = "Bearer ";
